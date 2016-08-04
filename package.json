@@ -1,0 +1,29 @@
+{
+  "name": "hof-revamp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "dependencies": {
+    "cheerio": "*",
+    "cheerio-select": "0.0.3",
+    "express": "*",
+    "request": "^2.74.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaber123/Fantasy-HOF-Revamp.git"
+  },
+  "keywords": [
+    "hof",
+    "fantasy"
+  ],
+  "author": "Alex Henry",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zaber123/Fantasy-HOF-Revamp/issues"
+  },
+  "homepage": "https://github.com/zaber123/Fantasy-HOF-Revamp#readme"
+}
