@@ -7,7 +7,8 @@
     "cheerio": "*",
     "cheerio-select": "0.0.3",
     "express": "*",
-    "request": "^2.74.0"
+    "request": "^2.74.0",
+    "request-promise": "^4.1.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
