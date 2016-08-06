@@ -5,6 +5,21 @@ var Team = require('./Classes/Team');
 var TotalSeason = require('./Classes/TotalSeason');
 
 module.exports = {
+    parseFinalStandings: function(htmlResponses) {
+        var ownersDict = {};
+        var totalSeasonsDict = {};
+
+        for (var i = 0; i < htmlResponses.length; i++) {
+            // Parse the final standings page
+            var $finalStandingsHtml = $.load(htmlResponses[i].html);
+
+            // Invoke the parser
+            this.parseOwners($finalStandingsHtml, ownersDict);
+            this.parseSeasonsFromYear($finalStandingsHtml, htmlResponses[i].year, ownersDict, totalSeasonsDict);
+        }
+        return {ownerInfo: ownersDict, totalSeasonsInfo: totalSeasonsDict};
+    },
+
     parseOwners: function($html, ownersDict) {
         $html("#finalRankingsTable .sortableRow").each(function() {
             var ownerName = $html("td:nth-child(3)", this).text();

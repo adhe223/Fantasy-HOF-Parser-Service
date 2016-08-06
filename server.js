@@ -1,3 +1,4 @@
+//example url: http://localhost:8081/getLeagueDataJSON?leagueId=44169
 var parser = require('./parser');
 var express = require('express');
 var Promise = require('promise');
@@ -7,12 +8,15 @@ const each = require('promise-each');
 var $ = require('cheerio');
 var app = express();
 
+//Globals
 const CURRENT_FANTASY_YEAR = "2016";
 
+//Web Server
 var server = app.listen(8081, function () {
     console.log('Example app listening on port 8081!');
 });
 
+//Routes
 app.get('/getLeagueDataJSON', function (req, res) {
     var httpRequests = [];
     var htmlResponses = [];
@@ -41,30 +45,15 @@ app.get('/getLeagueDataJSON', function (req, res) {
             return Promise.all(httpRequests);
         })
         .then(function() {
-            var dataObj = parseFinalStandings(htmlResponses);
+            var dataObj = parser.parseFinalStandings(htmlResponses);
             writeResponse(res, dataObj);
         })
         .catch(function(err) { console.log(err); res.end(); });
 });
 
+//Helpers
 function storeHTMLResponse(htmlResponses, html, year) {
     htmlResponses.push({html: html, year: year})
-}
-
-function parseFinalStandings(htmlResponses) {
-    var ownersDict = {};
-    var totalSeasonsDict = {};
-
-    for (var i = 0; i < htmlResponses.length; i++) {
-        // Parse the final standings page
-        var $finalStandingsHtml = $.load(htmlResponses[i].html);
-
-        // Invoke the parser
-        parser.parseOwners($finalStandingsHtml, ownersDict);
-        parser.parseSeasonsFromYear($finalStandingsHtml, htmlResponses[i].year, ownersDict, totalSeasonsDict);
-    }
-
-    return {ownerInfo: ownersDict, totalSeasonsInfo: totalSeasonsDict};
 }
 
 function writeResponse(response, dataObj) {
