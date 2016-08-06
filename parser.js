@@ -8,7 +8,9 @@ module.exports = {
     parseOwners: function($html, ownersDict) {
         $html("#finalRankingsTable .sortableRow").each(function() {
             var ownerName = $html("td:nth-child(3)", this).text();
-            ownersDict[ownerName] = new Owner(ownerName);
+            if (!ownersDict[ownerName]) {
+                ownersDict[ownerName] = new Owner(ownerName);
+            }
         });
     },
 
@@ -35,7 +37,7 @@ module.exports = {
             var gamesWon = parseInt(WLArr[0]);
             var gamesLost = parseInt(WLArr[1]);
             var pointsFor = parseFloat($html("td:nth-child(6)", this).text());
-            var pointsAgainst = parseFloat($html("td:nth-child(6)", this).text());
+            var pointsAgainst = parseFloat($html("td:nth-child(7)", this).text());
 
             // The first result is the champion, the second is the runner up
             if (index === 0) {champion = new Team(ownerName, teamName, year);}
