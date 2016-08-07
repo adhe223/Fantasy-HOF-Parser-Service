@@ -12,8 +12,8 @@ var app = express();
 const CURRENT_FANTASY_YEAR = "2016";
 
 //Web Server
-var server = app.listen(8081, function () {
-    console.log('Example app listening on port 8081!');
+var server = app.listen(process.env.PORT || 8081, function () {
+    console.log('Example app listening on port ' + (process.env.PORT || "8081") + "!");
 });
 
 //Routes
