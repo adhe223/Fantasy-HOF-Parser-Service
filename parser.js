@@ -3,6 +3,7 @@ var globals = require('./globals.js');
 var Season = require('./Classes/Season');
 var Owner = require('./Classes/Owner');
 var Team = require('./Classes/Team');
+var Matchup = require('./Classes/Matchup');
 var TotalSeason = require('./Classes/TotalSeason');
 
 module.exports = {
@@ -27,7 +28,7 @@ module.exports = {
             var $schedulePageHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
-            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo);
+            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.totalSeasonsInfo);
         }
     },
 
@@ -100,7 +101,27 @@ module.exports = {
         totalSeasonsDict[year] = new TotalSeason(year, totalPoints, champion, runnerUp, winningestTeams, losingestTeams, highScorer, lowScorer);
     },
 
-    parseMatchupsForYear: function($html, year, ownersDict) {
+    parseMatchupsForYear: function($html, year, totalSeasonsDict) {
+        var arrMatchupObjs = [];
 
+        // Start parsing
+        var scheduleTable = $html('table.tableBody').first(); // Sketchy parsing, the first table should be the one we want
+        var nonHeadingRows = $html('tr:not(.tableHead):not(.tableSubHead)', scheduleTable); // Select all rows of the table that aren't headings
+        $html('td:last-child:not(:first-child)', nonHeadingRows).parent().each(function(index) {  // If a td is the first and last child, it is the only td, get rid of them to not select the pesky nbsp lines
+            // 'this' is the tr element that has the data in it
+            var awayTeamName = $html('td:nth-child(1) a', this).text();
+            var awayTeamOwner = $html('td:nth-child(2)', this).text();
+            var homeTeamName = $html('td:nth-child(4) a', this).text();
+            var homeTeamOwner = $html('td:nth-child(5)', this).text();
+            var strPoints = $html('td:nth-child(6) a', this).text();
+            var pointsArr = strPoints.split("-");
+            var awayPoints = parseFloat(pointsArr[0]);
+            var homePoints = parseFloat(pointsArr[1]);
+
+            var matchupObj = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
+            arrMatchupObjs.push(matchupObj);
+        });
+
+        totalSeasonsDict[year].matchups = arrMatchupObjs;
     }
 };
