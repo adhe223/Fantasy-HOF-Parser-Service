@@ -27,7 +27,7 @@ module.exports = {
             var $schedulePageHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
-            this.parseSeasonsFromYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
+            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo);
         }
     },
 
@@ -98,5 +98,9 @@ module.exports = {
 
         // Add the total season values
         totalSeasonsDict[year] = new TotalSeason(year, totalPoints, champion, runnerUp, winningestTeams, losingestTeams, highScorer, lowScorer);
+    },
+
+    parseMatchupsForYear: function($html, year, ownersDict) {
+
     }
 };
