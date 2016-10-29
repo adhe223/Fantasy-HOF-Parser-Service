@@ -1,5 +1,6 @@
 //example url: http://localhost:8081/getLeagueDataJSON?leagueId=44169
 var parser = require('./parser');
+var globals = require('./globals.js');
 var express = require('express');
 var Promise = require('promise');
 var url = require('url');
@@ -8,8 +9,6 @@ const each = require('promise-each');
 var $ = require('cheerio');
 var app = express();
 
-//Globals
-const CURRENT_FANTASY_YEAR = "2016";
 
 //Web Server
 var server = app.listen(process.env.PORT || 8081, function () {
@@ -31,12 +30,18 @@ app.get('/getLeagueDataJSON', function (req, res) {
         })
         .then(function(yearCount) {
             for (var i = 1; i <= yearCount; i++) {
-                var currentYear = CURRENT_FANTASY_YEAR - i;
+                var currentYear = globals.CURRENT_FANTASY_YEAR - i;
 
                 // IIFC so that currentYear is captured instead of relying on closure in for loop
                 (function (year) {
+                    // Grab the final standings page
                     httpRequests.push(request("http://games.espn.com/ffl/tools/finalstandings?leagueId=" + leagueId + "&seasonId=" + currentYear)
-                        .then(function(html) { storeHTMLResponse(htmlResponses, html, year); })
+                        .then(function(html) { storeHTMLResponse(htmlResponses, html, year, globals.ResponsePageTypesEnum.FINAL_STANDINGS); })
+                    );
+
+                    // Grab the schedule page
+                    httpRequests.push(request("http://games.espn.com/ffl/schedule?leagueId=" + leagueId + "&seasonId=" + currentYear)
+                                          .then(function(html) { storeHTMLResponse(htmlResponses, html, year, globals.ResponsePageTypesEnum.SCHEDULE); })
                     );
                 })(currentYear);
             }
@@ -45,15 +50,22 @@ app.get('/getLeagueDataJSON', function (req, res) {
             return Promise.all(httpRequests);
         })
         .then(function() {
-            var dataObj = parser.parseFinalStandings(htmlResponses);
+            var dataObj = {
+                ownerInfo : {},
+                totalSeasonsInfo : {}
+            };
+
+            parser.parseFinalStandings(dataObj, htmlResponses);
+            parser.parseSchedule(dataObj, htmlResponses);
+
             writeResponse(res, dataObj);
         })
         .catch(function(err) { console.log(err); res.end(); });
 });
 
 //Helpers
-function storeHTMLResponse(htmlResponses, html, year) {
-    htmlResponses.push({html: html, year: year})
+function storeHTMLResponse(htmlResponses, html, year, pageTypeEnum) {
+    htmlResponses.push({ html: html, year: year, type: pageTypeEnum })
 }
 
 function writeResponse(response, dataObj) {

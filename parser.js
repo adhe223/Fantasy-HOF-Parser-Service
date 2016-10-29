@@ -1,23 +1,34 @@
 var $ = require('cheerio');
+var globals = require('./globals.js');
 var Season = require('./Classes/Season');
 var Owner = require('./Classes/Owner');
 var Team = require('./Classes/Team');
 var TotalSeason = require('./Classes/TotalSeason');
 
 module.exports = {
-    parseFinalStandings: function(htmlResponses) {
-        var ownersDict = {};
-        var totalSeasonsDict = {};
-
+    parseFinalStandings: function(dataObj, htmlResponses) {
         for (var i = 0; i < htmlResponses.length; i++) {
+            if (htmlResponses[i].type !== globals.ResponsePageTypesEnum.FINAL_STANDINGS) { continue; }
+
             // Parse the final standings page
             var $finalStandingsHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
-            this.parseOwners($finalStandingsHtml, ownersDict);
-            this.parseSeasonsFromYear($finalStandingsHtml, htmlResponses[i].year, ownersDict, totalSeasonsDict);
+            this.parseOwners($finalStandingsHtml, dataObj.ownerInfo);
+            this.parseSeasonsFromYear($finalStandingsHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
         }
-        return {ownerInfo: ownersDict, totalSeasonsInfo: totalSeasonsDict};
+    },
+
+    parseSchedule: function(dataObj, htmlResponses) {
+        for (var i = 0; i < htmlResponses.length; i++) {
+            if (htmlResponses[i].type !== globals.ResponsePageTypesEnum.SCHEDULE) { continue; }
+
+            // Parse the final standings page
+            var $schedulePageHtml = $.load(htmlResponses[i].html);
+
+            // Invoke the parser
+            this.parseSeasonsFromYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
+        }
     },
 
     parseOwners: function($html, ownersDict) {
