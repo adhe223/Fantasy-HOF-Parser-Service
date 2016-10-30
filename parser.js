@@ -114,9 +114,14 @@ module.exports = {
             var homeTeamName = $html('td:nth-child(4) a', this).text();
             var homeTeamOwner = $html('td:nth-child(5)', this).text();
             var strPoints = $html('td:nth-child(6) a', this).text();
+
+            //TODO: If "Preview" is here (or some other identifier) then we should ignore it
+
             var pointsArr = strPoints.split("-");
             var awayPoints = parseFloat(pointsArr[0]);
             var homePoints = parseFloat(pointsArr[1]);
+
+            // TODO: We should also add the info to the owner awway here so we don't have to loop later
 
             var matchupObj = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
             arrMatchupObjs.push(matchupObj);
