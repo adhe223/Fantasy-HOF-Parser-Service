@@ -3,7 +3,8 @@ var globals = require('./globals.js');
 var Season = require('./Classes/Season');
 var Owner = require('./Classes/Owner');
 var Team = require('./Classes/Team');
-var Matchup = require('./Classes/Matchup');
+var Matchup = require('./Classes/Matchup')
+var OwnerMatchupRecord = require('./Classes/OwnerMatchupRecord');
 var TotalSeason = require('./Classes/TotalSeason');
 
 module.exports = {
@@ -28,7 +29,7 @@ module.exports = {
             var $schedulePageHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
-            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.totalSeasonsInfo);
+            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
         }
     },
 
@@ -101,7 +102,7 @@ module.exports = {
         totalSeasonsDict[year] = new TotalSeason(year, totalPoints, champion, runnerUp, winningestTeams, losingestTeams, highScorer, lowScorer);
     },
 
-    parseMatchupsForYear: function($html, year, totalSeasonsDict) {
+    parseMatchupsForYear: function($html, year, ownersDict, totalSeasonsDict) {
         var arrMatchupObjs = [];
 
         // Start parsing
@@ -115,18 +116,33 @@ module.exports = {
             var homeTeamOwner = $html('td:nth-child(5)', this).text();
             var strPoints = $html('td:nth-child(6) a', this).text();
 
-            //TODO: If "Preview" is here (or some other identifier) then we should ignore it
+            if (strPoints.indexOf('Preview') > -1 || strPoints.indexOf('Box') > -1) {     //Sketchy parsing, I hate it but it might be the best way
+                // This matchup row is a preview or box score and hasn't completed yet, get out of here.
+                return true;    // In a query loop returning non false is the same as continue
+            }
 
             var pointsArr = strPoints.split("-");
             var awayPoints = parseFloat(pointsArr[0]);
             var homePoints = parseFloat(pointsArr[1]);
+            var oMatchup = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
+            arrMatchupObjs.push(oMatchup);
 
-            // TODO: We should also add the info to the owner awway here so we don't have to loop later
-
-            var matchupObj = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
-            arrMatchupObjs.push(matchupObj);
+            // TODO: We should also add the info to the owner array here so we don't have to loop
+            _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict);
         });
 
         totalSeasonsDict[year].matchups = arrMatchupObjs;
     }
 };
+
+_addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict) {
+    var homeOwnerMatchupRecord = ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner];
+
+    // Add the owner matchup record to the home owner
+    if (!homeOwnerMatchupRecord) {
+        // Need to create one because this is the first time we've seen this opponent
+        homeOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.awayTeamOwner);
+    }
+    homeOwnerMatchupRecord.addMatchup(oMatchup, );
+
+}
