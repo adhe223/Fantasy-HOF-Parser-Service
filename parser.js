@@ -124,10 +124,21 @@ module.exports = {
             var pointsArr = strPoints.split("-");
             var awayPoints = parseFloat(pointsArr[0]);
             var homePoints = parseFloat(pointsArr[1]);
-            var oMatchup = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
-            arrMatchupObjs.push(oMatchup);
 
-            // TODO: We should also add the info to the owner array here so we don't have to loop
+            // Figure out if this is a playoff or regular season matchup
+            var isPlayoffs;
+            var headerText = $html(this).prevAll(".tableHead:has(a[name*='matchup'])").first().text();
+
+            if (headerText.indexOf('PLAYOFFS') > -1) {
+                isPlayoffs = true
+                return true;   // TODO: Count playoff matchups. This continue is temporary
+            } else {
+                isPlayoffs = false;
+            }
+            // TODO: Differentiate Playoffs vs Regular season. Maybe request the playoff bracket?
+
+            var oMatchup = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints, isPlayoffs);
+            arrMatchupObjs.push(oMatchup);
             _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict);
         });
 
@@ -135,14 +146,25 @@ module.exports = {
     }
 };
 
-_addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict) {
+function _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict) {
     var homeOwnerMatchupRecord = ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner];
+    var awayOwnerMatchupRecord = ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner];
 
     // Add the owner matchup record to the home owner
     if (!homeOwnerMatchupRecord) {
         // Need to create one because this is the first time we've seen this opponent
         homeOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.awayTeamOwner);
     }
-    homeOwnerMatchupRecord.addMatchup(oMatchup, );
+    homeOwnerMatchupRecord.addMatchup(oMatchup, 1);
 
+    // Add the owner matchup record to the away owner
+    if (!awayOwnerMatchupRecord) {
+        // Need to create one because this is the first time we've seen this opponent
+        awayOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.homeTeamOwner);
+    }
+    awayOwnerMatchupRecord.addMatchup(oMatchup, 0);
+
+    //Set back the owner matchup records
+    ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner] = homeOwnerMatchupRecord;
+    ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner] = awayOwnerMatchupRecord;
 }
