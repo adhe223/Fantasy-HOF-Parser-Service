@@ -43,6 +43,11 @@ app.get('/getLeagueDataJSON', function (req, res) {
                     httpRequests.push(request("http://games.espn.com/ffl/schedule?leagueId=" + leagueId + "&seasonId=" + currentYear)
                                           .then(function(html) { storeHTMLResponse(htmlResponses, html, year, globals.ResponsePageTypesEnum.SCHEDULE); })
                     );
+
+                    // Grab the playoff bracket page
+                    httpRequests.push(request("http://games.espn.com/ffl/h2hplayoffs?leagueId=" + leagueId + "&seasonId=" + currentYear)
+                        .then(function(html) { storeHTMLResponse(htmlResponses, html, year, globals.ResponsePageTypesEnum.PLAYOFFS); })
+                    );
                 })(currentYear);
             }
 
@@ -57,6 +62,7 @@ app.get('/getLeagueDataJSON', function (req, res) {
 
             parser.parseFinalStandings(dataObj, htmlResponses);
             parser.parseSchedule(dataObj, htmlResponses);
+            parser.parsePlayoffs(dataObj, htmlResponses);
 
             writeResponse(res, dataObj);
         })

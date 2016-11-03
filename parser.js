@@ -1,18 +1,19 @@
 var $ = require('cheerio');
-var globals = require('./globals.js');
 var Season = require('./Classes/Season');
 var Owner = require('./Classes/Owner');
 var Team = require('./Classes/Team');
 var Matchup = require('./Classes/Matchup')
+var PlayoffMatchup = require('./Classes/PlayoffMatchup')
 var OwnerMatchupRecord = require('./Classes/OwnerMatchupRecord');
 var TotalSeason = require('./Classes/TotalSeason');
+var globals = require('./globals');
 
 module.exports = {
     parseFinalStandings: function(dataObj, htmlResponses) {
         for (var i = 0; i < htmlResponses.length; i++) {
             if (htmlResponses[i].type !== globals.ResponsePageTypesEnum.FINAL_STANDINGS) { continue; }
 
-            // Parse the final standings page
+            // Load the page into cheerio
             var $finalStandingsHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
@@ -25,11 +26,23 @@ module.exports = {
         for (var i = 0; i < htmlResponses.length; i++) {
             if (htmlResponses[i].type !== globals.ResponsePageTypesEnum.SCHEDULE) { continue; }
 
-            // Parse the final standings page
+            // Load the page into cheerio
             var $schedulePageHtml = $.load(htmlResponses[i].html);
 
             // Invoke the parser
-            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
+            this.parseMatchupsForYear($schedulePageHtml, htmlResponses[i].year, dataObj.totalSeasonsInfo);
+        }
+    },
+
+    parsePlayoffs: function(dataObj, htmlResponses) {
+        for (var i = 0; i < htmlResponses.length; i++) {
+            if (htmlResponses[i].type !== globals.ResponsePageTypesEnum.PLAYOFFS) { continue; }
+
+            // Load the page into cheerio
+            var $playoffPageHtml = $.load(htmlResponses[i].html);
+
+            // Invoke the parser
+            this.parsePlayoffsFromYear($playoffPageHtml, htmlResponses[i].year, dataObj.ownerInfo, dataObj.totalSeasonsInfo);
         }
     },
 
@@ -102,13 +115,19 @@ module.exports = {
         totalSeasonsDict[year] = new TotalSeason(year, totalPoints, champion, runnerUp, winningestTeams, losingestTeams, highScorer, lowScorer);
     },
 
-    parseMatchupsForYear: function($html, year, ownersDict, totalSeasonsDict) {
-        var arrMatchupObjs = [];
+    parseMatchupsForYear: function($html, year, totalSeasonsDict) {
+        var oMatchups = [];
 
         // Start parsing
         var scheduleTable = $html('table.tableBody').first(); // Sketchy parsing, the first table should be the one we want
         var nonHeadingRows = $html('tr:not(.tableHead):not(.tableSubHead)', scheduleTable); // Select all rows of the table that aren't headings
         $html('td:last-child:not(:first-child)', nonHeadingRows).parent().each(function(index) {  // If a td is the first and last child, it is the only td, get rid of them to not select the pesky nbsp lines
+            // Figure out if this is a playoff or regular season matchup
+            var headerText = $html(this).prevAll(".tableHead:has(a[name*='matchup'])").first().text();
+            if (headerText.indexOf('PLAYOFFS') > -1) {
+                return true;   // We'll handle this elsewhere because we need to load the playoff bracket page
+            }
+
             // 'this' is the tr element that has the data in it
             var awayTeamName = $html('td:nth-child(1) a', this).text();
             var awayTeamOwner = $html('td:nth-child(2)', this).text();
@@ -125,46 +144,35 @@ module.exports = {
             var awayPoints = parseFloat(pointsArr[0]);
             var homePoints = parseFloat(pointsArr[1]);
 
-            // Figure out if this is a playoff or regular season matchup
-            var isPlayoffs;
-            var headerText = $html(this).prevAll(".tableHead:has(a[name*='matchup'])").first().text();
-
-            if (headerText.indexOf('PLAYOFFS') > -1) {
-                isPlayoffs = true
-                return true;   // TODO: Count playoff matchups. This continue is temporary
-            } else {
-                isPlayoffs = false;
-            }
-            // TODO: Differentiate Playoffs vs Regular season. Maybe request the playoff bracket?
-
-            var oMatchup = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints, isPlayoffs);
-            arrMatchupObjs.push(oMatchup);
-            _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict);
+            // Store the data
+            var oMatchup = new Matchup(awayTeamName, awayTeamOwner, homeTeamName, homeTeamOwner, awayPoints, homePoints);
+            oMatchups.push(oMatchup);
         });
 
-        totalSeasonsDict[year].matchups = arrMatchupObjs;
+        totalSeasonsDict[year].matchups = oMatchups;
+    },
+
+    parsePlayoffsFromYear: function($html, year, ownersDict, totalSeasonsDict) {
+        var oPlayoffMatchups = [];
+
+        // TODO: This parsing is so sketchy
+        // The tds with a rowspan attribute that are not under a tr with class tableHead happen to be the ones we care about
+        $html("table.tableBody > tr:not(.tableHead) > td[rowspan]").each(function(index) {      // tbody is not recognized in cheerio because of a bizarre bug, that's why it's absent here
+            var dataRows = $html('table.tableBody > tr[align="right"]', this);
+            var firstTeamName = $html('td[align="left"] > a', dataRows).eq(0).text();    // Team name
+            var secondTeamName = $html('td[align="left"] > a', dataRows).eq(1).text();   // Team name. Will be blank if it's a bye week
+            if (firstTeamName.length === 0 || secondTeamName.length === 0) { return true; }  // Same as continue
+
+            var firstTeamPoints = parseFloat($html('td[align="right"]', dataRows).eq(0).text());
+            var secondTeamPoints = parseFloat($html('td[align="right"]', dataRows).eq(1).text());
+            var firstTeamOwner = globals.getOwnerNameFromTeamName(ownersDict, firstTeamName, year);
+            var secondTeamOwner = globals.getOwnerNameFromTeamName(ownersDict, secondTeamName, year);
+
+            // Store the data
+            var oPlayoffMatchup = new PlayoffMatchup(firstTeamName, secondTeamName, firstTeamOwner, secondTeamOwner, firstTeamPoints, secondTeamPoints);
+            oPlayoffMatchups.push(oPlayoffMatchup);
+        });
+
+        totalSeasonsDict[year].playoffMatchups = oPlayoffMatchups;
     }
 };
-
-function _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict) {
-    var homeOwnerMatchupRecord = ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner];
-    var awayOwnerMatchupRecord = ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner];
-
-    // Add the owner matchup record to the home owner
-    if (!homeOwnerMatchupRecord) {
-        // Need to create one because this is the first time we've seen this opponent
-        homeOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.awayTeamOwner);
-    }
-    homeOwnerMatchupRecord.addMatchup(oMatchup, 1);
-
-    // Add the owner matchup record to the away owner
-    if (!awayOwnerMatchupRecord) {
-        // Need to create one because this is the first time we've seen this opponent
-        awayOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.homeTeamOwner);
-    }
-    awayOwnerMatchupRecord.addMatchup(oMatchup, 0);
-
-    //Set back the owner matchup records
-    ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner] = homeOwnerMatchupRecord;
-    ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner] = awayOwnerMatchupRecord;
-}

@@ -1,0 +1,24 @@
+-Move _addOwnerMatchupRecordToOwners into the server side code that requests the JSON from the parser. Have a calculator class in there that does the functionality. The parser should only parse, not calculate.
+
+function _addOwnerMatchupRecordToOwners(oMatchup, ownersDict, totalSeasonsDict) {
+    var homeOwnerMatchupRecord = ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner];
+    var awayOwnerMatchupRecord = ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner];
+
+    // Add the owner matchup record to the home owner
+    if (!homeOwnerMatchupRecord) {
+        // Need to create one because this is the first time we've seen this opponent
+        homeOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.awayTeamOwner);
+    }
+    homeOwnerMatchupRecord.addMatchup(oMatchup, 1);
+
+    // Add the owner matchup record to the away owner
+    if (!awayOwnerMatchupRecord) {
+        // Need to create one because this is the first time we've seen this opponent
+        awayOwnerMatchupRecord = new OwnerMatchupRecord(oMatchup.homeTeamOwner);
+    }
+    awayOwnerMatchupRecord.addMatchup(oMatchup, 0);
+
+    //Set back the owner matchup records
+    ownersDict[oMatchup.homeTeamOwner].ownerMatchupRecordsDict[oMatchup.awayTeamOwner] = homeOwnerMatchupRecord;
+    ownersDict[oMatchup.awayTeamOwner].ownerMatchupRecordsDict[oMatchup.homeTeamOwner] = awayOwnerMatchupRecord;
+}
