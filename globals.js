@@ -14,7 +14,7 @@ module.exports = {
                 // Loop over the seasons in the owners seasonsDict to find the team name
                 for (var season in ownersDict[owner].seasonsDict) {
                     if (ownersDict[owner].seasonsDict.hasOwnProperty(season)) {
-                        if (ownersDict[owner].seasonsDict[season].teamName === teamName) {
+                        if (ownersDict[owner].seasonsDict[season].teamName.indexOf(teamName) !== -1) {  // ESPN doesn't put the whole name on the playoff's bracket //TODO: In the future map each team per season to an owner and use that ID. This current solution is susceptible to teams that are substrings of other teams
                             return ownersDict[owner].ownerName;
                         }
                     }
