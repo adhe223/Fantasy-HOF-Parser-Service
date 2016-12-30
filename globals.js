@@ -4,7 +4,7 @@ module.exports = {
         "SCHEDULE" : 1,
         "PLAYOFFS" : 2
     },
-    CURRENT_FANTASY_YEAR : "2016",
+    CURRENT_FANTASY_YEAR : "2017",
 
     //TODO: This would fail if there were duplicate team names in the league's history
     getOwnerNameFromTeamName : function(ownersDict, teamName, year) {
